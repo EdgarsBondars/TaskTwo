@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using ReactApp1.Server.Models;
-using ReactApp1.Server.Models.ViewModels;
 using DbContext = Microsoft.EntityFrameworkCore.DbContext;
 
 namespace ReactApp1.Server

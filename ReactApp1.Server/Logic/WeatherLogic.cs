@@ -10,14 +10,17 @@ namespace ReactApp1.Server.Logic
     /// </summary>
     public class WeatherLogic : IWeatherLogic
     {
+        private readonly HttpClient _httpClient;
         private readonly MyDbContext _context;
 
         /// <summary>
         /// Weather related logic.
         /// </summary>
+        /// <param name="httpClient">Http client.</param>
         /// <param name="context">The database context.</param>
-        public WeatherLogic(MyDbContext context)
+        public WeatherLogic(HttpClient httpClient, MyDbContext context)
         {
+            _httpClient = httpClient;
             _context = context;
         }
 
@@ -107,41 +110,38 @@ namespace ReactApp1.Server.Logic
             // TODO: move to appsetting or to some static class.
             string apiUrl = $"https://api.open-meteo.com/v1/forecast?latitude={city.Latitude}&longitude={city.Longitude}&current=temperature_2m";
 
-            using (HttpClient client = new HttpClient())
+            try
             {
-                try
+                HttpResponseMessage response = await _httpClient.GetAsync(apiUrl);
+
+                if (response.IsSuccessStatusCode)
                 {
-                    HttpResponseMessage response = await client.GetAsync(apiUrl);
+                    string jsonResponse = await response.Content.ReadAsStringAsync();
+                    var deserializedObject = JsonConvert.DeserializeObject<WeatherData>(jsonResponse);
 
-                    if (response.IsSuccessStatusCode)
+                    if (deserializedObject == null)
                     {
-                        string jsonResponse = await response.Content.ReadAsStringAsync();
-                        var deserializedObject = JsonConvert.DeserializeObject<WeatherData>(jsonResponse);
-
-                        if (deserializedObject == null)
-                        {
-                            return null;
-                        }
-
-                        return new TemperatureData()
-                        {
-                            City = city,
-                            Temperature = deserializedObject.Current.Temperature_2m,
-                        };
+                        return null;
                     }
-                    else
+
+                    return new TemperatureData()
                     {
-                        Console.WriteLine($"Failed to fetch data. Status code: {response.StatusCode}");
-                    }
+                        City = city,
+                        Temperature = deserializedObject.Current.Temperature_2m,
+                    };
                 }
-                catch (Exception ex)
+                else
                 {
-                    Console.WriteLine($"Error: {ex.Message}");
-                    throw;
+                    Console.WriteLine($"Failed to fetch data. Status code: {response.StatusCode}");
                 }
-
-                return null;
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+                throw;
+            }
+
+            return null;
         }
     }
 }
